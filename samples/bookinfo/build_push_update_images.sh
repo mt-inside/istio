@@ -14,22 +14,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+set -x
 set -o errexit
 
-if [ "$#" -ne 1 ]; then
-    echo Missing version parameter
-    echo Usage: build-services.sh \<version\>
+if [ "$#" -ne 2 ]; then
+    echo Missing parameter
+    echo Usage: build-services.sh \<version\> \<image registry user\>
     exit 1
 fi
 
 VERSION=$1
-src/build-services.sh "${VERSION}"
+REG_USER=$2
+src/build-services.sh "${VERSION}" "${REG_USER}"
 
 for v in ${VERSION} "latest"
 do
-  IMAGES+=$(docker images -f reference=istio/examples-bookinfo*:"$v" --format "{{.Repository}}:$v")
+  IMAGES+="$(docker images -f reference=${REG_USER}/examples-bookinfo*:$v --format '{{.Repository}}':$v) "
 done
 
 for IMAGE in ${IMAGES}; do docker push "${IMAGE}"; done
-sed -i "s/\\(istio\\/examples-bookinfo-.*\\):[[:digit:]]\\.[[:digit:]]\\.[[:digit:]]/\\1:$VERSION/g" -- */bookinfo*.yaml
+sed -i "s/\\(${REG_USER}\\/examples-bookinfo-.*\\):[[:digit:]]\\.[[:digit:]]\\.[[:digit:]]/\\1:$VERSION/g" -- */bookinfo*.yaml
 
